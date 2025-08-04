@@ -1,37 +1,25 @@
 import pandas as pd
 
-# Load the dataset
-df = pd.read_csv("netflix_titles.csv")
+df = pd.read_csv("netflix_movies_tvshows_raw.csv")
 
-# View first few rows
-print(df.head())
-
-# 1. Check for missing values
-print(df.isnull().sum())
-
-# Fill missing 'rating' with most frequent value
-df['rating'].fillna(df['rating'].mode()[0], inplace=True)
-
-# Fill missing 'country' with "Unknown"
-df['country'].fillna("Unknown", inplace=True)
-
-# Drop rows with missing 'date_added'
-df.dropna(subset=['date_added'], inplace=True)
-
-# 2. Remove duplicates
-df.drop_duplicates(inplace=True)
-
-# 3. Standardize text: lowercase column 'type'
-df['type'] = df['type'].str.lower()
-
-# 4. Convert 'date_added' to datetime format
-df['date_added'] = pd.to_datetime(df['date_added'])
-
-# 5. Strip whitespace from column names
-df.columns = df.columns.str.strip()
-
-# 6. Final check
 print(df.info())
+print(df.head())
+df = df.drop_duplicates()
+# Fill missing titles or descriptions with "Unknown"
+df['title'] = df['title'].fillna("Unknown Title")
+df['description'] = df['description'].fillna("No description available")
 
-# Save cleaned data
-df.to_csv("netflix_cleaned.csv", index=False)
+# Drop rows where director or cast is missing (or use fillna if preferred)
+df = df.dropna(subset=['director', 'cast'])
+df['country'] = df['country'].str.strip().str.lower()
+df['country'] = df['country'].replace({
+    'usa': 'united states',
+    'uk': 'united kingdom'
+})
+df['date_added'] = pd.to_datetime(df['date_added'], errors='coerce')
+# Separate TV Shows (Seasons) and Movies (Minutes)
+df['duration_clean'] = df['duration'].str.extract(r'(\d+)').astype(float)
+df['duration_type'] = df['duration'].apply(lambda x: 'Season' if 'Season' in x else 'Minutes')
+df['rating'] = df['rating'].replace({
+    'PG13': 'PG-13'
+})
